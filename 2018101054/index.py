@@ -214,8 +214,8 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                     text_5 = [i[1] for i in temp_ext_reg]
                     text_5_extlin = " ".join(text_5)
                     text_5 = re.findall(r'([a-zA-Z0-9]+)', text_5_extlin)
-
-                    temp_extlin_text = stemmer.stemWords(text_5)
+                    text_5_extlin = [i for i in text_5 if i not in stopword_set]
+                    temp_extlin_text = stemmer.stemWords(text_5_extlin)
 #--------------------------- Adding external link tokens to the inverted index
                     for i in temp_extlin_text:
                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
@@ -249,8 +249,8 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                     text_5 = [i[1] for i in temp_ext_reg]
                     text_5_extlin = " ".join(text_5)
                     text_5 = re.findall(r'([a-zA-Z0-9]+)', text_5_extlin)
-
-                    temp_extlin_text = stemmer.stemWords(text_5)
+                    text_5_extlin = [i for i in text_5 if i not in stopword_set]
+                    temp_extlin_text = stemmer.stemWords(text_5_extlin)
 #--------------------------- Adding external link tokens to the inverted index
                     for i in temp_extlin_text:
                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
