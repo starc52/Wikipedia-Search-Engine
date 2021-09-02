@@ -5,18 +5,18 @@ import json
 import Stemmer
 import pickle as pkl
 import sys
-
+find_lst = []
+stemmer = Stemmer.Stemmer('english')
 PATH_INDEX = os.path.join(sys.argv[1], "index.txt")
 with open(PATH_INDEX, 'r') as f:
     index = json.load(f)
     f.close()
-
-stemmer = Stemmer.Stemmer('english')
-query = sys.argv[2]
-query_lst = query.split(" ")
-find_lst = []
 find_tag = []
-ans = {}
+
+prompt = sys.argv[2]
+result = {}
+
+query_lst = prompt.split(" ")
 
 for element in query_lst:
     tmp = element.split(":")
@@ -27,19 +27,20 @@ for element in query_lst:
         find_lst.append(tmp[0])
 
 for word in find_lst:
-    l_word = word.lower()
-    s_word = stemmer.stemWord(l_word)
-    
-    if s_word in index.keys():
+    l_docs = []
+    c_docs = []
+    i_docs = []
+    t_docs = []
+    b_docs = []
+    r_docs = []
+    s_word = stemmer.stemWord(word.lower())
+
+    if s_word  not in index.keys():
+        result[word] = {"title": [], "text": [], "references": [], "external links": [], "categories": [], "infobox": []}        
+    else:
         word_dict = index[s_word]
         plain_field_dict = {}
-        t_docs = []
-        b_docs = []
-        r_docs = []
-        l_docs = []
-        c_docs = []
-        i_docs = []
-
+        
         if 't' in word_dict.keys():
             t_docs+=list(word_dict['t'])
         plain_field_dict["title"] = t_docs
@@ -64,8 +65,6 @@ for word in find_lst:
             i_docs+=list(word_dict['i'])
         plain_field_dict["infobox"] = i_docs
 
-        ans[word]= plain_field_dict
-    else:
-        ans[word]= {"title": [], "text": [], "references": [], "external links": [], "categories": [], "infobox": []}
+        result[word] = plain_field_dict
 
-print(json.dumps(ans, indent=4))
+print(json.dumps(result, indent=2))
