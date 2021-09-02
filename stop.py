@@ -33,6 +33,6 @@ for i in range(len(stopword_add)):
     stopword_set.add(stopword_add[i])
 
 print(len(stopword_set))
-with open('stopword.pkl', 'wb') as f:
+with open('stopwords.pkl', 'wb') as f:
     pkl.dump(set(stopword_set), f)
     f.close()
