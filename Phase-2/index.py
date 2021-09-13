@@ -12,13 +12,12 @@ from string import ascii_lowercase
 
 PATH_WIKI_XML = sys.argv[1]
 PATH_INDEX = sys.argv[2]
-PATH_STAT = sys.argv[3]
 
 start_time = time.time()
 
-indexFilesList=["##"]
-combinations = [''.join(i) for i in product(ascii_lowercase, repeat = 2)]
-indexFilesList = indexFilesList+combinations
+total_characters = ascii_lowercase+"0123456789"
+
+indexFilesList = [''.join(i) for i in product(total_characters, repeat = 2)]
 empty_dic = {}
 for i in indexFilesList:
     file_path = os.path.join(PATH_INDEX, i)
@@ -26,6 +25,9 @@ for i in indexFilesList:
         f.write(json.dumps(empty_dic, indent=0, separators=(",", ":")))
         f.close()
 
+temp_inverted_index={}
+for i in indexFilesList:
+    temp_inverted_index[i]={}
 
 pathWikiXML = PATH_WIKI_XML
 
@@ -33,8 +35,6 @@ totalCount = 0
 title = None
 count_ns=[]
 
-# inverted_index={}
-# ss = SnowballStemmer(language='english')
 stemmer = Stemmer.Stemmer('english')
 
 with open('stopwords.pkl', 'rb') as f:
@@ -42,7 +42,6 @@ with open('stopwords.pkl', 'rb') as f:
     f.close()
 stopword_set.add('category')
 
-# temp_words_uniq=set([])
 
 def hms_string(sec_elapsed):
     h = int(sec_elapsed / (60 * 60))
@@ -58,26 +57,51 @@ def strip_tag_name(t):
         t = t[idx + 1:]
     return t
 
-def addCount2Index(word, totalCount,field):
-    # global inverted_index
-    if int(word[0]) not in list(range(0, 10)) and len(word)>=2:
-        file_path = os.path.join(PATH_INDEX, word[0:2])
-    elif int(word[0]) in list(range(0, 10)):
-        file_path = os.path.join(PATH_INDEX, "##")
+def addTempIndex2Files(temp_inverted_index):
+    for i in indexFilesList:
+        file_path = os.path.join(PATH_INDEX, i)
+        
+        with open(file_path, 'r') as f:
+            inverted_index = json.load(f)
+            f.close()
+        
+        addInvertedIndex=temp_inverted_index[i]
+        for token in addInvertedIndex.keys():
+            if token not in inverted_index:
+                inverted_index[token] = addInvertedIndex[token]
+            elif token in inverted_index:
+                for field in addInvertedIndex[token].keys():
+                    if field not in inverted_index[token]:
+                        inverted_index[token][field]=addInvertedIndex[token][field]
+                    elif field in inverted_index[token]:
+                        inverted_index[token][field].update(addInvertedIndex[token][field])
+        
+        with open(file_path, 'w') as f:
+            f.write(json.dumps(inverted_index, indent=0, separators=(",", ":")).replace("\n", ""))
+            f.close()
+
+
+def addCount2Index(word, totalCount,field, freq):
+    global temp_inverted_index
+    if len(word)>=2:
+        key_word = word[0:2]
     elif len(word)<2:
-        file_path = os.path.join(PATH_INDEX, word[0]*2)
+        key_word = word[0]*2
     
-    with open(file_path, 'r') as f:
-        inverted_index = json.load(f)
-        f.close()
-    if word not in inverted_index.keys():
-        inverted_index[word]={field:{totalCount:1}}
-    elif word in inverted_index.keys() and field not in inverted_index[word].keys():
-        inverted_index[word][field] = {totalCount:1}
-    elif word in inverted_index.keys() and totalCount not in inverted_index[word][field].keys():
-        inverted_index[word][field][totalCount]=1
+    if word not in temp_inverted_index[key_word].keys():
+        temp_inverted_index[key_word][word]={field:{totalCount:1}}
+    elif word in temp_inverted_index[key_word].keys() and field not in temp_inverted_index[key_word][word].keys():
+        temp_inverted_index[key_word][word][field] = {totalCount:1}
+    elif word in temp_inverted_index[key_word].keys() and totalCount not in temp_inverted_index[key_word][word][field].keys():
+        temp_inverted_index[key_word][word][field][totalCount]=1
     else:
-        inverted_index[word][field][totalCount]+=1
+        temp_inverted_index[key_word][word][field][totalCount]+=1
+    
+    if totalCount%freq==0 and totalCount !=0:
+        addTempIndex2Files(temp_inverted_index)
+        temp_inverted_index={}
+        for i in indexFilesList:
+            temp_inverted_index[i]={}
 
 def fineTuneRegex(listOfstrings):
     returnListOfStrings=["" for i in range(len(listOfstrings))]
@@ -93,7 +117,6 @@ def fineTuneRegex(listOfstrings):
             if listOfstrings[i][j]==bracket and listOfstrings[i][j+1]==bracket:
                 j+=1
                 stack+=1
-            # print(listOfstrings[i], j)
             if listOfstrings[i][j]==inBracket and listOfstrings[i][j+1]==inBracket:
                 j+=1
                 stack-=1
@@ -103,7 +126,8 @@ def fineTuneRegex(listOfstrings):
     while "" in returnListOfStrings:
         returnListOfStrings.remove("")
     return returnListOfStrings
-
+#-----------------------------------------------------FREQ variable
+freq = 10000
 for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
     tname = strip_tag_name(elem.tag)
 
@@ -122,11 +146,8 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
         if tname == 'title':
             title = elem.text
             if not title:
-                # print("title:", title)
                 continue
             title_1 = title.lower()
-            # for i in title_1.split(" "):
-            #     temp_words_uniq.add(i)
             temp_title_1=re.findall(r'[a-zA-Z0-9]+', title_1)
             temp_title=[i for i in temp_title_1 if i not in stopword_set]
             temp_title = stemmer.stemWords(temp_title)
@@ -134,8 +155,7 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
             for i in temp_title:
                 if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
                     stemmed_i = i
-                    # temp_words_uniq.add(stemmed_i)
-                    addCount2Index(stemmed_i, totalCount, 't')
+                    addCount2Index(stemmed_i, totalCount, 't', freq)
 
         elif tname == 'id' and not inrevision:
             id = int(elem.text)
@@ -146,8 +166,6 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
             if not text:
                 continue
             text_1 = text.lower()
-            # for i in text_1.split(" "):
-            #     temp_words_uniq.add(i)
             complete_text = text_1
 
             text_split=text_1.split("\n")
@@ -168,15 +186,14 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
 #---------------------------- Adding body tokens to inverted index
             for i in temp_text:
                 if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
-                    stemmed_i = i#ss.stem(i)
-                    addCount2Index(stemmed_i, totalCount, 'b')
+                    stemmed_i = i
+                    addCount2Index(stemmed_i, totalCount, 'b', freq)
             
             text_2 = complete_text
 
             parse_categories =r"\[\[category:.*?\]\]"
             temp_cat_reg = re.findall(parse_categories, text_2)
             if len(temp_cat_reg)>0:
-                # text_2_cat = [i[0] for i in temp_cat_reg]        
                 text_2 = " ".join(temp_cat_reg)
                 text_2_cat = re.findall(r'([a-zA-Z0-9]+)', text_2)
                 
@@ -187,7 +204,7 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                 for i in temp_cat_text:
                     if len(i)<20  and len(i)!=0:
                         stemmed_i = i
-                        addCount2Index(stemmed_i, totalCount, 'c')
+                        addCount2Index(stemmed_i, totalCount, 'c', freq)
 
             text_3 = complete_text
 
@@ -205,7 +222,7 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                 for i in temp_info_text:
                     if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
                         stemmed_i = i
-                        addCount2Index(stemmed_i, totalCount, 'i')
+                        addCount2Index(stemmed_i, totalCount, 'i', freq)
                 
             text_4 = complete_text
             if len(re.findall(r"==references==", text_4))>0 and len(re.findall(r"==external links==", text_4))>0:
@@ -228,7 +245,7 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                     for i in temp_ref_text:
                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
                             stemmed_i = i
-                            addCount2Index(stemmed_i, totalCount, 'r')
+                            addCount2Index(stemmed_i, totalCount, 'r', freq)
 
                 parse_ext_links = r"( *\* *\[[^ ]*)(.*?)(\])"
                 temp_ext_reg=re.findall(parse_ext_links, text_5_extlin)
@@ -242,7 +259,7 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                     for i in temp_extlin_text:
                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
                             stemmed_i = i
-                            addCount2Index(stemmed_i, totalCount, 'l')
+                            addCount2Index(stemmed_i, totalCount, 'l', freq)
             
             elif len(re.findall(r"==references==", text_4))>0:
                 text_4_ref = text_4.split("==references==")[1]
@@ -262,7 +279,7 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                     for i in temp_ref_text:
                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
                             stemmed_i = i
-                            addCount2Index(stemmed_i, totalCount, 'r')
+                            addCount2Index(stemmed_i, totalCount, 'r', freq)
             elif len(re.findall(r"==external links==", text_4))>0:
                 text_5_extlin = text_4.split("==external links==")[1]
                 parse_ext_links = r"( *\* *\[[^ ]*)(.*?)(\])"
@@ -277,24 +294,19 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                     for i in temp_extlin_text:
                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
                             stemmed_i = i
-                            addCount2Index(stemmed_i, totalCount, 'l')
+                            addCount2Index(stemmed_i, totalCount, 'l', freq)
 
         elif tname == 'page':
             count_ns.append(ns)
             orig_text=text
                         
             totalCount += 1
-            # if totalCount%10000==0:
-            #     print(totalCount)               
+            if totalCount%10000==0:
+                print(totalCount)               
         elem.clear()
 
 
-# with open(PATH_INDEX, "w") as f:
-#     f.write(json.dumps(inverted_index, indent=0, separators=(",", ":")).replace("\n", ""))
-#     f.close()
 
-# print(len(set(temp_words_uniq)))
-# print(len(inverted_index.keys()))
 total_keys = 0
 for i in indexFilesList:
     file_path = os.path.join(PATH_INDEX, i)
@@ -305,9 +317,7 @@ for i in indexFilesList:
 
 print(total_keys)
 
-# with open(PATH_STAT, 'w') as f:
-#     f.write(str(len(set(temp_words_uniq))) + "\n"+str(len(inverted_index.keys())))
 
 elapsed_time = time.time() - start_time
-# print("Total pages: {:,}".format(totalCount))
+print("Total pages: {:,}".format(totalCount))
 print("Elapsed time: {}".format(hms_string(elapsed_time)))

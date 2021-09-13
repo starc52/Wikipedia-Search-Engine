@@ -3,3 +3,4 @@
 *.model
 *.xml*
 *.bz2
+Phase-2/inverted_index/*
