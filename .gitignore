@@ -1,3 +1,5 @@
 *.json
 *.json#
 *.model
+*.xml*
+*.bz2
