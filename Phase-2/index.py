@@ -127,7 +127,7 @@ def fineTuneRegex(listOfstrings):
         returnListOfStrings.remove("")
     return returnListOfStrings
 #-----------------------------------------------------FREQ variable
-freq = 10000
+freq = 500
 for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
     tname = strip_tag_name(elem.tag)
 
