@@ -68,14 +68,13 @@ def addTempIndex2Files(temp_inverted_index):
         addInvertedIndex=temp_inverted_index[i]
         for token in addInvertedIndex.keys():
             if token not in inverted_index:
-                inverted_index[token] = addInvertedIndex[token]
-            elif token in inverted_index:
-                for field in addInvertedIndex[token].keys():
-                    if field not in inverted_index[token]:
-                        inverted_index[token][field]=addInvertedIndex[token][field]
-                    elif field in inverted_index[token]:
-                        inverted_index[token][field].update(addInvertedIndex[token][field])
-        
+                inverted_index[token] = {}
+                
+            for field in addInvertedIndex[token].keys():
+                if field not in inverted_index[token]:
+                    inverted_index[token][field]={}
+                inverted_index[token][field].update(addInvertedIndex[token][field])
+    
         with open(file_path, 'w') as f:
             f.write(json.dumps(inverted_index, indent=0, separators=(",", ":")).replace("\n", ""))
             f.close()
@@ -97,11 +96,11 @@ def addCount2Index(word, totalCount,field, freq):
     else:
         temp_inverted_index[key_word][word][field][totalCount]+=1
     
-    if totalCount%freq==0 and totalCount !=0:
-        addTempIndex2Files(temp_inverted_index)
-        temp_inverted_index={}
-        for i in indexFilesList:
-            temp_inverted_index[i]={}
+    # if totalCount%freq==0 and totalCount != 0:
+    #     addTempIndex2Files(temp_inverted_index)
+    #     temp_inverted_index={}
+    #     for i in indexFilesList:
+    #         temp_inverted_index[i]={}
 
 def fineTuneRegex(listOfstrings):
     returnListOfStrings=["" for i in range(len(listOfstrings))]
@@ -127,7 +126,7 @@ def fineTuneRegex(listOfstrings):
         returnListOfStrings.remove("")
     return returnListOfStrings
 #-----------------------------------------------------FREQ variable
-freq = 500
+freq = 80000
 for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
     tname = strip_tag_name(elem.tag)
 
@@ -301,10 +300,14 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
             orig_text=text
                         
             totalCount += 1
-            if totalCount%10000==0:
+            if totalCount%freq==0:
+                addTempIndex2Files(temp_inverted_index)
+
                 print(totalCount)               
+        
         elem.clear()
 
+addTempIndex2Files(temp_inverted_index)
 
 
 total_keys = 0
