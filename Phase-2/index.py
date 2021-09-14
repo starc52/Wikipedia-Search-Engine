@@ -302,13 +302,17 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
             totalCount += 1
             if totalCount%freq==0:
                 addTempIndex2Files(temp_inverted_index)
-
+                temp_inverted_index={}
+                for i in indexFilesList:
+                    temp_inverted_index[i]={}
                 print(totalCount)               
         
         elem.clear()
 
 addTempIndex2Files(temp_inverted_index)
-
+temp_inverted_index={}
+for i in indexFilesList:
+    temp_inverted_index[i]={}
 
 total_keys = 0
 for i in indexFilesList:
