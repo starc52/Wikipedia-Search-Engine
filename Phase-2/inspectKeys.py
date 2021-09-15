@@ -5,9 +5,11 @@ file_name = sys.argv[1]
 with open(file_name, "r") as f:
     index=json.load(f)
     f.close()
-
-list_of_keys = str(index.keys()).replace(",", "\n")
-
-with open("temp", "w") as f:
-    f.write(list_of_keys)
-    f.close()
+tupleList=[]
+for i in index.keys():
+    count=0
+    for j in index[i]:
+        count+=len(index[i][j].keys())
+    tupleList.append((i, count))
+tupleList.sort(key= lambda x:x[1])
+print(tupleList)

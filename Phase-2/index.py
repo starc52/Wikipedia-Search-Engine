@@ -44,19 +44,23 @@ with open('stopwords.pkl', 'rb') as f:
     stopword_set = pkl.load(f)
     f.close()
 stopword_set.add('category')
+stopword_set.add('reference')
+stopword_set.add('title')
+print(len(stopword_set))
 
-string_garbage = re.compile(r"\[\[[^\[\]]*\]\]|{{[^{}]*?}}")
+string_garbage = re.compile(r"{{[^{}]*?}}")
 links_garbage = re.compile(r'(https?://\S+)')#re.compile(r"(https?://[^| ]+)")
 token_reg = re.compile(r"[a-zA-Z0-9]+")
 number_garbage = re.compile(r"[0-9]+[a-z]+[0-9a-z]*")
 parse_references = re.compile(r"(\*?{{.*\|)(title=.*?)(\|.*?}})")
 parse_ext_links = re.compile(r"( *\* *?\[[^ ]*)(.*?)(\])")
 css_reg = re.compile(r"{\|(.*?)\|}", re.DOTALL)
-# parse_infobox=re.compile(r"{{infobox *\n}}\n", re.DOTALL)
+parse_infobox=re.compile(r"{{infobox *\n}}\n", re.DOTALL)
 # parse_infobox = re.compile(r"({{infobox.*)(\|.*)(\|.*?}}\n)")
 parse_categories =re.compile(r"\[\[category:.*?\]\]")
-remove_comments = re.compile(r"&lt;!--.*?--&gt;", re.DOTALL)
-html_tags = re.compile(r"&lt;.*?&gt;")
+# remove_comments = re.compile(r"&lt;!--.*?--&gt;", re.DOTALL)
+html_tags = re.compile(r"(&lt;([a-zA-Z0-9]*).*?&gt;).*?\1")
+ref_garbage = re.compile(r"&lt;ref(.*?)?&gt;(.*?)&lt;/ref&gt;|<ref(.*?)?>(.*?)</ref>", re.DOTALL)#)
 
 def hms_string(sec_elapsed):
     h = int(sec_elapsed / (60 * 60))
@@ -110,6 +114,8 @@ def removeNumbers(listOfWords):
     for i in listOfWords:
         if len(i)>4 and i[0] in "0123456789":
             continue
+        elif len(i)>2 and i[0] in "3456789":
+            continue
         else:
             returnList.append(i)
     return returnList
@@ -147,39 +153,44 @@ def bracketStack(strings):
                 returnString=strings[:j+1]
                 break
     return returnString
-
+countOf2 = 0
+countOfText=0
 def parseBody(totalCount, textString):
+    global countOf2
     info_text=""
-    reference_text = ""
+    reference_text = []
     external_link_text ="" 
     categories_text=[]
+    # info_list = re.findall(parse_infobox, textString)
+    # for i in info_list:
+    #     info_text+=bracketStack(i[2:])
+
     if len(re.findall(r"{{infobox", textString))>0:
         infoBoxContent=textString.split("{{infobox")[1]
         info_text=bracketStack(infoBoxContent)
         textString.replace(info_text, "")
-    
+    reference_text=re.findall(ref_garbage, textString)
     categories_text = re.findall(parse_categories, textString)
     for i in categories_text:
         textString.replace(i, "")
-    if len(re.findall(r"==references==", textString))>0 and len(re.findall(r"==external links==", textString))>0:
-        textStringRef = textString.split("==references==")[1]
-        external_link_text = textString.split("==external links==")[1]
-        reference_text = textStringRef.replace(external_link_text, "")
-        textString = textString.replace(reference_text, "")
-        textString = textString.replace(external_link_text, "")
-    elif len(re.findall(r"==references==", textString))>0:
-        reference_text = textString.split("==references==")[1]
-        textString = textString.replace(reference_text, "")
-    elif len(re.findall(r"==external links==", textString))>0:
+    
+    if len(re.findall(r"==external links==", textString))>0:
         external_link_text = textString.split("==external links==")[1]
         textString = textString.replace(external_link_text, "")
+
+
     ## Body
     text_split=textString.split("\n")
+    temp_len=len(text_split)
     for i in range(len(text_split)):
-        if len(text_split[i])>2:
+        if i < len(text_split) and len(text_split[i])>2:
             if text_split[i][0:3]=="# 2":
-                text_split[i]=""
+                text_split.remove(text_split[i])
+    temp_len2 = len(text_split)
+    if temp_len!=temp_len2:
+        countOf2+=1
     textString="\n".join(text_split)
+    textString=re.sub(ref_garbage,"", textString)
     textString = re.sub(string_garbage, '', textString)    
     textString = re.sub(number_garbage, '', textString)
     textTokens = re.findall(token_reg, textString)
@@ -188,10 +199,22 @@ def parseBody(totalCount, textString):
     stopTextTokens = removeNumbers(stopTextTokens)
     stemTextTokens = stemmer.stemWords(stopTextTokens)
     for i in stemTextTokens:
-        if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
+        if (len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0) or (len(i)==1 and i in "0123456789"):
             addCount2Index(i, totalCount, 'b')
     ## Infobox
     if len(info_text)>0:
+        info_split=info_text.split("\n")
+        for id, i in enumerate(info_split):
+            for idx, j in enumerate(i):
+                if j=="="  and idx == len(i)-1:
+                    break
+                elif j=="=":
+                    info_split[id] = i[:idx+1]
+                    break
+            if i[:-1]=="=":
+                info_split.remove(i)
+            
+        info_text="\n".join(info_split)
         info_text = re.sub(links_garbage, '', info_text)
         info_text = re.sub(number_garbage, '', info_text)
         infoTokens = re.findall(token_reg, info_text)
@@ -200,7 +223,7 @@ def parseBody(totalCount, textString):
         
         stemInfoTokens = stemmer.stemWords(stopInfoTokens)
         for i in stemInfoTokens:
-            if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
+            if (len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0) or (len(i)==1 and i  in "0123456789"):
                 addCount2Index(i, totalCount, 'i')
     ## Categories
     if len(categories_text)>0:
@@ -215,9 +238,13 @@ def parseBody(totalCount, textString):
                 addCount2Index(i, totalCount, 'c')
     ## References
     if len(reference_text)>0:
+        # print(reference_text)
+        content=[i[3]for i in reference_text]
+        reference_text = " ".join(content)
         reference_text=re.findall(parse_references, reference_text)
         if len(reference_text)>0:
             refExtText=[i[1] for i in reference_text]
+            # print(refExtText)
             refExtText = " ".join(refExtText)
             linkRef = re.sub(links_garbage, '', refExtText)
             numRef = re.sub(number_garbage, '', linkRef)
@@ -226,7 +253,7 @@ def parseBody(totalCount, textString):
             stopRefTokens = removeNumbers(stopRefTokens)
             stemRefTokens = stemmer.stemWords(stopRefTokens)
             for i in stemRefTokens:
-                if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0 and i!="reflist":
+                if (len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0) or (len(i)==1 and i  in "0123456789"):
                     addCount2Index(i, totalCount, 'r')    
     ## External Links
     if len(external_link_text)>0:
@@ -241,7 +268,7 @@ def parseBody(totalCount, textString):
             stopExtLink = removeNumbers(stopExtLink)
             stemExtLink = stemmer.stemWords(stopExtLink)
             for i in stemExtLink:
-                if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
+                if (len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0) or (len(i)==1 and i  in "0123456789"):
                     addCount2Index(i, totalCount, 'l')
 #-----------------------------------------------------FREQ variable
 freqD = 500000
@@ -274,7 +301,7 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
             temp_title = stemmer.stemWords(temp_title)
 #------------------------------- Adding Title tokens to the index
             for i in temp_title:
-                if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
+                if (len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0 )or(len(i)==1 and i in "0123456789"):
                     stemmed_i = i
                     addCount2Index(stemmed_i, totalCount, 't')
 
@@ -286,8 +313,17 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
             text = elem.text
             if not text:
                 continue
+            countOfText+=1
             text_1 = text.lower()
-            text_1 = re.sub(html_tags, '', text_1)
+            temp_num = len(text_1)
+            # text_1=re.sub(ref_garbage, "", text_1)
+            # if re.findall(ref_garbage, text_1):
+            #     print(re.findall(ref_garbage, text_1))
+            temp_num1 = len(text_1)
+            # text_1 = re.sub(html_tags, '', text_1)
+            temp_num2 = len(text_1)
+            # if temp_num-temp_num1!=0:
+            #     print("difference", temp_num-temp_num1)
             complete_text = text_1
             parseBody(totalCount, complete_text)
 
@@ -322,8 +358,8 @@ for i in indexFilesList:
     total_keys += len(inverted_index.keys())
 
 print(total_keys)
-
-
+print("count of text", countOfText)
+print(countOf2)
 elapsed_time = time.time() - start_time
 print("Total pages: {:,}".format(totalCount))
 print("Elapsed time: {}".format(hms_string(elapsed_time)))
