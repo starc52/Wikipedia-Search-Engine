@@ -56,7 +56,7 @@ css_reg = re.compile(r"{\|(.*?)\|}", re.DOTALL)
 # parse_infobox = re.compile(r"({{infobox.*)(\|.*)(\|.*?}}\n)")
 parse_categories =re.compile(r"\[\[category:.*?\]\]")
 remove_comments = re.compile(r"&lt;!--.*?--&gt;", re.DOTALL)
-html_tags = re.compile(r"&lt;.*?&gt;", re.DOTALL)
+html_tags = re.compile(r"&lt;.*?&gt;")
 
 def hms_string(sec_elapsed):
     h = int(sec_elapsed / (60 * 60))
@@ -167,10 +167,10 @@ def parseBody(totalCount, textString):
         reference_text = textStringRef.replace(external_link_text, "")
         textString = textString.replace(reference_text, "")
         textString = textString.replace(external_link_text, "")
-    elif len(re.findall(r"==references==", text_4))>0:
+    elif len(re.findall(r"==references==", textString))>0:
         reference_text = textString.split("==references==")[1]
-        textString = textString.replace(reference_text)
-    elif len(re.findall(r"==external links==", text_4))>0:
+        textString = textString.replace(reference_text, "")
+    elif len(re.findall(r"==external links==", textString))>0:
         external_link_text = textString.split("==external links==")[1]
         textString = textString.replace(external_link_text, "")
     ## Body
@@ -180,8 +180,6 @@ def parseBody(totalCount, textString):
             if text_split[i][0:3]=="# 2":
                 text_split[i]=""
     textString="\n".join(text_split)
-    textString = re.sub(remove_comments, '', textString)    
-    textString = re.sub(html_tags, '', textString)        
     textString = re.sub(string_garbage, '', textString)    
     textString = re.sub(number_garbage, '', textString)
     textTokens = re.findall(token_reg, textString)
@@ -194,8 +192,6 @@ def parseBody(totalCount, textString):
             addCount2Index(i, totalCount, 'b')
     ## Infobox
     if len(info_text)>0:
-        info_text = re.sub(remove_comments, '', info_text)
-        info_text = re.sub(html_tags, '', info_text)
         info_text = re.sub(links_garbage, '', info_text)
         info_text = re.sub(number_garbage, '', info_text)
         infoTokens = re.findall(token_reg, info_text)
@@ -207,7 +203,7 @@ def parseBody(totalCount, textString):
             if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
                 addCount2Index(i, totalCount, 'i')
     ## Categories
-    if len(categories_text)>0
+    if len(categories_text)>0:
         categories_text = " ".join(categories_text)
         catTokens = re.findall(token_reg, categories_text)
         stopCatTokens = [i for i in catTokens if i not in stopword_set]
@@ -218,7 +214,7 @@ def parseBody(totalCount, textString):
             if len(i)<20  and len(i)!=0:
                 addCount2Index(i, totalCount, 'c')
     ## References
-    if len(reference_text)>0
+    if len(reference_text)>0:
         reference_text=re.findall(parse_references, reference_text)
         if len(reference_text)>0:
             refExtText=[i[1] for i in reference_text]
@@ -233,7 +229,7 @@ def parseBody(totalCount, textString):
                 if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0 and i!="reflist":
                     addCount2Index(i, totalCount, 'r')    
     ## External Links
-    if len(external_link_text)>0
+    if len(external_link_text)>0:
         extLinkText=re.findall(parse_ext_links, external_link_text)
         if len(extLinkText)>0:
             extLinkList = [i[1] for i in extLinkText]
@@ -291,163 +287,9 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
             if not text:
                 continue
             text_1 = text.lower()
-            # text_1 = re.sub(css_reg, '', text_1)
+            text_1 = re.sub(html_tags, '', text_1)
             complete_text = text_1
-            parseBody(complete_text)
-
-#             info_text=""
-#             if len(re.findall(r"{{infobox", text_1))>0:
-#                 infoBoxContent=text_1.split("{{infobox")[1]
-#                 info_text=bracketStack(infoBoxContent)
-#             reference_text=""
-#             external_link_text=""
-#             if len(re.findall(r"==references==", text_1))>0:
-#                 reference_text = text_1.split("==references==")[1]
-#             if len(re.findall(r"==external links==", text_1))>0:
-#                 external_link_text = text_1.split("==external links==")[1]
-            
-#             text_split=text_1.split("\n")
-#             for i in range(len(text_split)):
-#                 if len(text_split[i])>2:
-#                     if text_split[i][0:3]=="# 2" or text_split[i][0:7]=='&lt;!--':
-#                         text_split[i]=""
-#             text="\n".join(text_split)
-#             text_1 = re.sub(string_garbage, '', text)
-#             text_1 = text_1.replace(info_text, "")
-#             text_1 = text_1.replace(reference_text, "")
-#             text_1 = text_1.replace(external_link_text, "")
-#             text_1 = re.sub(parse_categories, '', text_1)
-#             text = re.sub(number_garbage, '', text_1)
-#             text_1 = re.findall(token_reg, text)
-#             text = [i for i in text_1 if i not in stopword_set]
-            
-#             text = removeNumbers(text)
-#             temp_text = stemmer.stemWords(text)
-# #---------------------------- Adding body tokens to inverted index
-#             for i in temp_text:
-#                 if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
-#                     stemmed_i = i
-#                     addCount2Index(stemmed_i, totalCount, 'b')
-            
-#             text_2 = complete_text
-
-            
-#             temp_cat_reg = re.findall(parse_categories, text_2)
-#             if len(temp_cat_reg)>0:
-#                 text_2 = " ".join(temp_cat_reg)
-#                 text_2 = re.sub(links_garbage, '', text_2)
-
-#                 text_2 = re.sub(number_garbage, '', text_2)
-
-#                 text_2_cat = re.findall(token_reg, text_2)
-#                 text_2 = [i for i in text_2_cat if i not in stopword_set]
-#                 text_2 = removeNumbers(text_2)
-                
-#                 temp_cat_text = stemmer.stemWords(text_2)
-# #-------------------------Adding Category tokens to the inverted index
-#                 for i in temp_cat_text:
-#                     if len(i)<20  and len(i)!=0:
-#                         stemmed_i = i
-#                         addCount2Index(stemmed_i, totalCount, 'c')
-
-#             text_3 = complete_text
-#             if len(info_text)>0:
-#                 text_3 = re.sub(links_garbage, '', info_text)
-#                 text_3 = re.sub(number_garbage, '', text_3)
-#                 text_3_info = re.findall(token_reg, text_3)
-#                 text_3 = [i for i in text_3_info if i not in stopword_set]
-#                 text_3 = removeNumbers(text_3)
-                
-#                 temp_info_text = stemmer.stemWords(text_3)
-# #---------------------------- Adding infobox tokens to the inverted index            
-#                 for i in temp_info_text:
-#                     if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
-#                         stemmed_i = i
-#                         addCount2Index(stemmed_i, totalCount, 'i')
-                
-#             text_4 = complete_text
-#             if len(re.findall(r"==references==", text_4))>0 and len(re.findall(r"==external links==", text_4))>0:
-#                 text_4_ref = text_4.split("==references==")[1]
-#                 text_5_extlin = text_4.split("==external links==")[1]
-#                 text_4 = text_4_ref.replace(text_5_extlin, "")
-#                 temp_ref_reg=re.findall(parse_references, text_4)
-#                 if len(temp_ref_reg)>0:
-#                     text_4_ref=[i[1] for i in temp_ref_reg]
-
-#                     text_4 = " ".join(text_4_ref)
-#                     text_4 = re.sub(links_garbage, '', text_4)
-
-#                     text_4 = re.sub(number_garbage, '', text_4)
-#                     text_4_ref = re.findall(token_reg, text_4)
-
-#                     text_4 = [i for i in text_4_ref if i not in stopword_set]
-
-#                     text_4 = removeNumbers(text_4)
-
-#                     temp_ref_text = stemmer.stemWords(text_4)
-# #------------------------ Adding reference tokens to the inverted index
-#                     for i in temp_ref_text:
-#                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
-#                             stemmed_i = i
-#                             addCount2Index(stemmed_i, totalCount, 'r')
-
-#                 temp_ext_reg=re.findall(parse_ext_links, text_5_extlin)
-#                 if len(temp_ext_reg)>0:
-#                     text_5 = [i[1] for i in temp_ext_reg]
-#                     text_5_extlin = " ".join(text_5)
-#                     text_5_extlin = re.sub(links_garbage, '', text_5_extlin)
-#                     text_5_extlin = re.sub(number_garbage, '', text_5_extlin)
-#                     text_5 = re.findall(token_reg, text_5_extlin)
-#                     text_5_extlin = [i for i in text_5 if i not in stopword_set]
-#                     text_5_extlin = removeNumbers(text_5_extlin)
-                    
-#                     temp_extlin_text = stemmer.stemWords(text_5_extlin)
-# #--------------------------- Adding external link tokens to the inverted index
-#                     for i in temp_extlin_text:
-#                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
-#                             stemmed_i = i
-#                             addCount2Index(stemmed_i, totalCount, 'l')
-            
-#             elif len(re.findall(r"==references==", text_4))>0:
-#                 text_4_ref = text_4.split("==references==")[1]
-#                 parse_references = r"(\*?{{.*\|)(title=.*?)(\|.*?}})"
-#                 temp_ref_reg=re.findall(parse_references, text_4_ref)
-#                 if len(temp_ref_reg)>0:
-#                     text_4_ref=[i[1] for i in temp_ref_reg]
-
-#                     text_4 = " ".join(text_4_ref)
-#                     text_4 = re.sub(links_garbage, '', text_4)
-
-#                     text_4 = re.sub(number_garbage, '', text_4)
-#                     text_4_ref = re.findall(token_reg, text_4)
-
-#                     text_4 = [i for i in text_4_ref if i not in stopword_set]
-#                     text_4 = removeNumbers(text_4)
-
-#                     temp_ref_text = stemmer.stemWords(text_4)
-# #------------------------ Adding reference tokens to the inverted index
-#                     for i in temp_ref_text:
-#                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
-#                             stemmed_i = i
-#                             addCount2Index(stemmed_i, totalCount, 'r')
-#             elif len(re.findall(r"==external links==", text_4))>0:
-#                 text_5_extlin = text_4.split("==external links==")[1]
-#                 temp_ext_reg=re.findall(parse_ext_links, text_5_extlin)
-#                 if len(temp_ext_reg)>0:
-#                     text_5 = [i[1] for i in temp_ext_reg]
-#                     text_5_extlin = " ".join(text_5)
-#                     text_5_extlin = re.sub(links_garbage, '', text_5_extlin)
-#                     text_5_extlin = re.sub(number_garbage, '', text_5_extlin)
-#                     text_5 = re.findall(token_reg, text_5_extlin)
-#                     text_5_extlin = [i for i in text_5 if i not in stopword_set]
-#                     text_5_extlin = removeNumbers(text_5_extlin)
-                    
-#                     temp_extlin_text = stemmer.stemWords(text_5_extlin)
-# #--------------------------- Adding external link tokens to the inverted index
-#                     for i in temp_extlin_text:
-#                         if len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0:
-#                             stemmed_i = i
-#                             addCount2Index(stemmed_i, totalCount, 'l')
+            parseBody(totalCount, complete_text)
 
         elif tname == 'page':
             count_ns.append(ns)
