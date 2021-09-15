@@ -161,9 +161,6 @@ def parseBody(totalCount, textString):
     reference_text = []
     external_link_text ="" 
     categories_text=[]
-    # info_list = re.findall(parse_infobox, textString)
-    # for i in info_list:
-    #     info_text+=bracketStack(i[2:])
 
     if len(re.findall(r"{{infobox", textString))>0:
         infoBoxContent=textString.split("{{infobox")[1]
@@ -315,15 +312,6 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                 continue
             countOfText+=1
             text_1 = text.lower()
-            temp_num = len(text_1)
-            # text_1=re.sub(ref_garbage, "", text_1)
-            # if re.findall(ref_garbage, text_1):
-            #     print(re.findall(ref_garbage, text_1))
-            temp_num1 = len(text_1)
-            # text_1 = re.sub(html_tags, '', text_1)
-            temp_num2 = len(text_1)
-            # if temp_num-temp_num1!=0:
-            #     print("difference", temp_num-temp_num1)
             complete_text = text_1
             parseBody(totalCount, complete_text)
 
@@ -358,8 +346,6 @@ for i in indexFilesList:
     total_keys += len(inverted_index.keys())
 
 print(total_keys)
-print("count of text", countOfText)
-print(countOf2)
 elapsed_time = time.time() - start_time
 print("Total pages: {:,}".format(totalCount))
 print("Elapsed time: {}".format(hms_string(elapsed_time)))
