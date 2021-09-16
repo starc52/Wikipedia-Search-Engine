@@ -21,9 +21,10 @@ indexFilesList = [''.join(i) for i in product(total_characters, repeat = 3)]
 empty_dic = {}
 for i in indexFilesList:
     file_path = os.path.join(PATH_INDEX, i)
-    with open(file_path, "w") as f:
-        f.write(json.dumps(empty_dic, indent=0, separators=(",", ":")))
-        f.close()
+    try:
+        os.remove(file_path)
+    except:
+        print("Tried to remove a non existent file")
 
 temp_inverted_index={}
 for i in indexFilesList:
@@ -88,7 +89,11 @@ def addTempIndex2Files(temp_inverted_index):
     for i in indexFilesList:
         file_path = os.path.join(PATH_INDEX, i)
         addInvertedIndex=temp_inverted_index[i]
-        if addInvertedIndex:            
+        if addInvertedIndex:
+            if not os.path.isfile(file_path):
+                with open(file_path, "w") as f:
+                    f.write(json.dumps({}, indent=0, separators=(",", ":")))
+                    f.close()
             with open(file_path, 'r') as f:
                 inverted_index = json.load(f)
                 f.close()
@@ -271,7 +276,7 @@ def breakIndex(memory_factor=(1000*1000), threshold = 50):
             sizeList.append((os.path.getsize(i))/memory_factor)
     countOfbreaks=0
     for id, file_path in enumerate(sizeSelected):
-        factor = int(sizeList[id]//threshold)+1
+        factor = int(sizeList[id]//threshold)*2+1
         with open(file_path, 'r') as f:
             temp_index2divide = json.load(f)
             f.close()
@@ -388,11 +393,12 @@ temp_title_dict={}
 total_keys = 0
 for i in indexFilesList:
     file_path = os.path.join(PATH_INDEX, i)
-    with open(file_path, "r") as f:
-        inverted_index = json.load(f)
-        f.close()
-    total_keys += len(inverted_index.keys())
-breakIndex(1000, 50)
+    if os.path.isfile(file_path):
+        with open(file_path, "r") as f:
+            inverted_index = json.load(f)
+            f.close()
+        total_keys += len(inverted_index.keys())
+breakIndex(1000, 100)
 
 print("Total keys : {}".format(total_keys))
 elapsed_time = time.time() - start_time
