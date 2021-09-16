@@ -124,7 +124,9 @@ def addCount2Index(word, totalCount,field):
     global temp_inverted_index
     if len(word)>=3:
         key_word = word[0:3]
-    elif len(word)<3:
+    elif len(word)==2:
+        key_word = word[0:2]+word[0]
+    elif len(word)==1:
         key_word = word[0]*3
     
     if word not in temp_inverted_index[key_word].keys():
@@ -260,24 +262,24 @@ def breakIndex(memory_factor=(1000*1000), threshold = 50):
     onlyfiles = [os.path.join(PATH_INDEX, f) for f in os.listdir(PATH_INDEX) if os.path.isfile(os.path.join(PATH_INDEX, f))]
     sizeSelected=[]
     sizeList=[]
-    endCorr = {}
+    endCorr = []
     for i in onlyfiles:
         if (os.path.getsize(i))/memory_factor>threshold and i[-4:]!="json":
             sizeSelected.append(i)
             sizeList.append((os.path.getsize(i))/memory_factor)
     for id, file_path in enumerate(sizeSelected):
-        factor = (sizeList[id]//threshold)+1
+        factor = int(sizeList[id]//threshold)+1
         with open(file_path, 'r') as f:
             temp_index2divide = json.load(f)
             f.close()
-        sorted_keysList=list(temp_index2divide.keys()).sort()
-        sizeOfNewfiles=len(sorted_keysList)//factor
+        sorted_keysList=sorted(list(temp_index2divide.keys()))
+        sizeOfNewfiles=int(len(sorted_keysList)//factor)
         for i in range(factor):
             newDictionary={}
             for j in sorted_keysList[i*sizeOfNewfiles:(i+1)*sizeOfNewfiles]:
                 newDictionary.update({j:temp_index2divide[j]})
             end=sorted_keysList[((i+1)*sizeOfNewfiles)-1]
-            endCorr[end]=file_path.split("/")[-1]
+            endCorr.append((end, file_path.split("/")[-1]))
             new_file_name = file_path+"_"+str(i)
             with open(new_file_name, 'w') as f:
                 f.write(json.dumps(newDictionary, indent=0, separators=(",", ":")).replace("\n", ""))
@@ -286,7 +288,7 @@ def breakIndex(memory_factor=(1000*1000), threshold = 50):
         for j in sorted_keysList[factor*sizeOfNewfiles:]:
             newDictionary.update({j:temp_index2divide[j]})
         end=sorted_keysList[-1]
-        endCorr[end]=file_path.split("/")[-1]
+        endCorr.append((end, file_path.split("/")[-1]))
         new_file_name = file_path+"_"+str(factor)
         with open(new_file_name, 'w') as f:
             f.write(json.dumps(newDictionary, indent=0, separators=(",", ":")).replace("\n", ""))
@@ -294,8 +296,8 @@ def breakIndex(memory_factor=(1000*1000), threshold = 50):
         
         os.remove(file_path)
     brokenHash = os.path.join(PATH_INDEX, "lastWord")
-    with open(brokenHash, 'w') as f:
-        f.write(json.dumps(endCorr, indent=0, separators=(",", ":")).replace("\n", ""))
+    with open(brokenHash, 'wb') as f:
+        pkl.dump(endCorr, f)
         f.close()
     
 
