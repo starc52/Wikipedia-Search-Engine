@@ -260,13 +260,16 @@ def parseBody(totalCount, textString):
 
 def breakIndex(memory_factor=(1000*1000), threshold = 50):
     onlyfiles = [os.path.join(PATH_INDEX, f) for f in os.listdir(PATH_INDEX) if os.path.isfile(os.path.join(PATH_INDEX, f))]
+    onlyfiles = sorted(onlyfiles)
     sizeSelected=[]
     sizeList=[]
     endCorr = []
+    brokenFiles=[]
     for i in onlyfiles:
         if (os.path.getsize(i))/memory_factor>threshold and i[-4:]!="json":
             sizeSelected.append(i)
             sizeList.append((os.path.getsize(i))/memory_factor)
+    countOfbreaks=0
     for id, file_path in enumerate(sizeSelected):
         factor = int(sizeList[id]//threshold)+1
         with open(file_path, 'r') as f:
@@ -275,31 +278,39 @@ def breakIndex(memory_factor=(1000*1000), threshold = 50):
         sorted_keysList=sorted(list(temp_index2divide.keys()))
         sizeOfNewfiles=int(len(sorted_keysList)//factor)
         for i in range(factor):
+            countOfbreaks+=1
             newDictionary={}
             for j in sorted_keysList[i*sizeOfNewfiles:(i+1)*sizeOfNewfiles]:
                 newDictionary.update({j:temp_index2divide[j]})
-            end=sorted_keysList[((i+1)*sizeOfNewfiles)-1]
-            endCorr.append((end, file_path.split("/")[-1]))
             new_file_name = file_path+"_"+str(i)
+            end=sorted_keysList[((i+1)*sizeOfNewfiles)-1]
+            endCorr.append((new_file_name.split("/")[-1], end))
             with open(new_file_name, 'w') as f:
                 f.write(json.dumps(newDictionary, indent=0, separators=(",", ":")).replace("\n", ""))
                 f.close()
+        countOfbreaks+=1
+
         newDictionary={}
         for j in sorted_keysList[factor*sizeOfNewfiles:]:
             newDictionary.update({j:temp_index2divide[j]})
-        end=sorted_keysList[-1]
-        endCorr.append((end, file_path.split("/")[-1]))
         new_file_name = file_path+"_"+str(factor)
+        end=sorted_keysList[-1]
+        endCorr.append((new_file_name.split("/")[-1], end))
         with open(new_file_name, 'w') as f:
             f.write(json.dumps(newDictionary, indent=0, separators=(",", ":")).replace("\n", ""))
             f.close()
+        brokenFiles.append((file_path.split("/")[-1], countOfbreaks))
+
         
         os.remove(file_path)
     brokenHash = os.path.join(PATH_INDEX, "lastWord")
     with open(brokenHash, 'wb') as f:
         pkl.dump(endCorr, f)
         f.close()
-    
+    brokenFilesList = os.path.join(PATH_INDEX, "broken")
+    with open(brokenFilesList, 'wb') as f:
+        pkl.dump(brokenFiles, f)
+        f.close()
 
 
 #-----------------------------------------------------FREQ variable
