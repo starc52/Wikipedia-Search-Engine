@@ -17,7 +17,7 @@ start_time = time.time()
 
 total_characters = ascii_lowercase+"0123456789"
 
-indexFilesList = [''.join(i) for i in product(total_characters, repeat = 2)]
+indexFilesList = [''.join(i) for i in product(total_characters, repeat = 3)]
 empty_dic = {}
 for i in indexFilesList:
     file_path = os.path.join(PATH_INDEX, i)
@@ -122,10 +122,10 @@ def removeNumbers(listOfWords):
             
 def addCount2Index(word, totalCount,field):
     global temp_inverted_index
-    if len(word)>=2:
-        key_word = word[0:2]
-    elif len(word)<2:
-        key_word = word[0]*2
+    if len(word)>=3:
+        key_word = word[0:3]
+    elif len(word)<3:
+        key_word = word[0]*3
     
     if word not in temp_inverted_index[key_word].keys():
         temp_inverted_index[key_word][word]={field:{totalCount:1}}
@@ -200,18 +200,6 @@ def parseBody(totalCount, textString):
             addCount2Index(i, totalCount, 'b')
     ## Infobox
     if len(info_text)>0:
-        info_split=info_text.split("\n")
-        for id, i in enumerate(info_split):
-            for idx, j in enumerate(i):
-                if j=="="  and idx == len(i)-1:
-                    break
-                elif j=="=":
-                    info_split[id] = i[:idx+1]
-                    break
-            if i[:-1]=="=":
-                info_split.remove(i)
-            
-        info_text="\n".join(info_split)
         info_text = re.sub(links_garbage, '', info_text)
         info_text = re.sub(number_garbage, '', info_text)
         infoTokens = re.findall(token_reg, info_text)
@@ -267,9 +255,54 @@ def parseBody(totalCount, textString):
             for i in stemExtLink:
                 if (len(i)<20 and i[-3:]!="jpg" and i[-4:]!="jpeg" and i[-3:]!="png" and len(i)!=0) or (len(i)==1 and i  in "0123456789"):
                     addCount2Index(i, totalCount, 'l')
+
+def breakIndex(memory_factor=(1000*1000), threshold = 50):
+    onlyfiles = [os.path.join(PATH_INDEX, f) for f in os.listdir(PATH_INDEX) if os.path.isfile(os.path.join(PATH_INDEX, f))]
+    sizeSelected=[]
+    sizeList=[]
+    endCorr = {}
+    for i in onlyfiles:
+        if (os.path.getsize(i))/memory_factor>threshold and i[-4:]!="json":
+            sizeSelected.append(i)
+            sizeList.append((os.path.getsize(i))/memory_factor)
+    for id, file_path in enumerate(sizeSelected):
+        factor = (sizeList[id]//threshold)+1
+        with open(file_path, 'r') as f:
+            temp_index2divide = json.load(f)
+            f.close()
+        sorted_keysList=list(temp_index2divide.keys()).sort()
+        sizeOfNewfiles=len(sorted_keysList)//factor
+        for i in range(factor):
+            newDictionary={}
+            for j in sorted_keysList[i*sizeOfNewfiles:(i+1)*sizeOfNewfiles]:
+                newDictionary.update({j:temp_index2divide[j]})
+            end=sorted_keysList[((i+1)*sizeOfNewfiles)-1]
+            endCorr[end]=file_path.split("/")[-1]
+            new_file_name = file_path+"_"+str(i)
+            with open(new_file_name, 'w') as f:
+                f.write(json.dumps(newDictionary, indent=0, separators=(",", ":")).replace("\n", ""))
+                f.close()
+        newDictionary={}
+        for j in sorted_keysList[factor*sizeOfNewfiles:]:
+            newDictionary.update({j:temp_index2divide[j]})
+        end=sorted_keysList[-1]
+        endCorr[end]=file_path.split("/")[-1]
+        new_file_name = file_path+"_"+str(factor)
+        with open(new_file_name, 'w') as f:
+            f.write(json.dumps(newDictionary, indent=0, separators=(",", ":")).replace("\n", ""))
+            f.close()
+        
+        os.remove(file_path)
+    brokenHash = os.path.join(PATH_INDEX, "lastWord")
+    with open(brokenHash, 'w') as f:
+        f.write(json.dumps(endCorr, indent=0, separators=(",", ":")).replace("\n", ""))
+        f.close()
+    
+
+
 #-----------------------------------------------------FREQ variable
-freqD = 500000
-freqT=100000
+freqD = 50000
+freqT = 50000
 for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
     tname = strip_tag_name(elem.tag)
 
@@ -327,7 +360,9 @@ for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
                 for i in indexFilesList:
                     temp_inverted_index[i]={}
             if totalCount%1000==0:
-                print(totalCount)        
+                with open("./progress_file.txt", "w") as f:
+                    f.write(str(totalCount))
+                    f.close()
         elem.clear()
 
 addTempIndex2Files(temp_inverted_index)
@@ -344,8 +379,9 @@ for i in indexFilesList:
         inverted_index = json.load(f)
         f.close()
     total_keys += len(inverted_index.keys())
+breakIndex(1000, 50)
 
-print(total_keys)
+print("Total keys : {}".format(total_keys))
 elapsed_time = time.time() - start_time
 print("Total pages: {:,}".format(totalCount))
 print("Elapsed time: {}".format(hms_string(elapsed_time)))
