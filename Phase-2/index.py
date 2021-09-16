@@ -25,6 +25,12 @@ for i in indexFilesList:
         os.remove(file_path)
     except:
         print("Tried to remove a non existent file")
+for i in os.listdir(PATH_INDEX):
+    file_path = os.path.join(PATH_INDEX, i)
+    try:
+        os.remove(file_path)
+    except:
+        print("Tried to remove a non existent file")
 
 temp_inverted_index={}
 for i in indexFilesList:
@@ -288,7 +294,10 @@ def breakIndex(memory_factor=(1000*1000), threshold = 50):
             for j in sorted_keysList[i*sizeOfNewfiles:(i+1)*sizeOfNewfiles]:
                 newDictionary.update({j:temp_index2divide[j]})
             new_file_name = file_path+"_"+str(i)
-            end=sorted_keysList[((i+1)*sizeOfNewfiles)-1]
+            try:
+                end=sorted_keysList[((i+1)*sizeOfNewfiles)-1]
+            except:
+                print(((i+1)*sizeOfNewfiles)-1, len(sorted_keysList))
             endCorr.append((new_file_name.split("/")[-1], end))
             with open(new_file_name, 'w') as f:
                 f.write(json.dumps(newDictionary, indent=0, separators=(",", ":")).replace("\n", ""))
@@ -319,8 +328,8 @@ def breakIndex(memory_factor=(1000*1000), threshold = 50):
 
 
 #-----------------------------------------------------FREQ variable
-freqD = 50000
-freqT = 50000
+freqD = 60000
+freqT = 60000
 for event, elem in etree.iterparse(pathWikiXML, events=('start', 'end')):
     tname = strip_tag_name(elem.tag)
 
@@ -398,7 +407,7 @@ for i in indexFilesList:
             inverted_index = json.load(f)
             f.close()
         total_keys += len(inverted_index.keys())
-breakIndex(1000, 100)
+breakIndex((1000*1000), 40)
 
 print("Total keys : {}".format(total_keys))
 elapsed_time = time.time() - start_time

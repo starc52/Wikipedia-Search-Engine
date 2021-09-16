@@ -9,7 +9,6 @@ import heapq
 import math
 from itertools import product
 from string import ascii_lowercase
-start_time = time.time()
 total_characters = ascii_lowercase+"0123456789"
 
 find_lst = []
@@ -28,13 +27,11 @@ def hms_string(sec_elapsed):
     s = sec_elapsed % 60
     return "{}:{:>02}:{:>05.2f}".format(h, m, s)
 
-with open('progress_file.txt', 'r') as f:
-    numberOfPages = int(f.readline())
-    f.close()
+numberOfPages=31452341
 
 find_tag = []
 
-prompt = (sys.argv[2]).lower()
+PATH_QUERY = sys.argv[2]
 
 def parseQuery(prompt):
     words={}
@@ -59,6 +56,46 @@ def parseQuery(prompt):
             tokens = [i for i in spaceSplit if i not in stopword_set]
             tokens = stemmer.stemWords(tokens)
             words = {token:fields for token in tokens}
+        elif colonSplitLen>1 and len(colonSplit[0])!=1:
+            colonAfterSpace = [i.split(":") for i in spaceSplit]
+            words={}
+            colonsHit=False
+            for idx, i in enumerate(colonAfterSpace):
+                if len(i)>1:
+                    colonsHit=True
+                    endId=0
+                    for j in range(idx+1, len(colonAfterSpace)):
+                        if len(colonAfterSpace[j])>1:
+                            endId=j
+                            break
+                    if endId==0:
+                        endId=len(colonAfterSpace)
+                    fields = [i[0]]
+                    tokens = [i[1]]
+                    for j in range(idx+1, endId):
+                        tokens.append(colonAfterSpace[j][0])
+                    tokens = [i for i in tokens if i not in stopword_set]
+                    tokens = stemmer.stemWords(tokens)
+                    temp_dict={token:fields for token in tokens}
+                    for token in temp_dict:
+                        if token in words:
+                            words[token]+=temp_dict[token]
+                        else:
+                            words[token]=temp_dict[token]
+                    
+                elif len(i)==1 and colonsHit==False:
+                    tokens = [i[0]]
+                    tokens = [i for i in tokens if i not in stopword_set]
+                    tokens = stemmer.stemWords(tokens)
+                    fields = [i for i in field_string]
+                    temp_dict={token:fields for token in tokens}
+                    for token in temp_dict:
+                        if token in words:
+                            words[token]+=temp_dict[token]
+                        else:
+                            words[token]=temp_dict[token]
+                else:
+                    continue
         else:
             colonAfterSpace = [i.split(":") for i in spaceSplit]
             words={}
@@ -77,7 +114,12 @@ def parseQuery(prompt):
                         tokens.append(colonAfterSpace[j][0])
                     tokens = [i for i in tokens if i not in stopword_set]
                     tokens = stemmer.stemWords(tokens)
-                    words.update({token:fields for token in tokens})
+                    temp_dict={token:fields for token in tokens}
+                    for token in temp_dict:
+                        if token in words:
+                            words[token]+=temp_dict[token]
+                        else:
+                            words[token]=temp_dict[token]
                 else:
                     continue
     return words
@@ -87,7 +129,7 @@ def loadDocs(prompt):
     relevantDocs = []
     notFound=0
     documentUnion={}
-    weightsOfFields={"t":100, "b":15, "c":20, "i":30, "l":10, "r":15}
+    weightsOfFields={"t":100, "b":75, "c":2.0, "i":80, "l":1, "r":1.5}
     with open(os.path.join(PATH_INDEX, "broken"), "rb") as f:
         brokenIndices=pkl.load(f)
         f.close()
@@ -135,7 +177,7 @@ def loadDocs(prompt):
                     for docID in inverted_index[key][i]:
                         if docID not in documentUnion.keys():
                             documentUnion[docID]=1
-                        documentUnion[docID]*=math.log(1+(inverted_index[key][i][docID]))*idf*weightsOfFields[i]
+                        documentUnion[docID]+=math.log(1+(inverted_index[key][i][docID]))*idf*weightsOfFields[i]
                 else:
                     notFoundCounter+=1
             if notFoundCounter == len(val):
@@ -145,13 +187,14 @@ def loadDocs(prompt):
                     for docID in inverted_index[key][i]:
                         if docID not in documentUnion.keys():
                             documentUnion[docID]=1
-                        documentUnion[docID]*=math.log(1+(inverted_index[key][i][docID]))*idf*weightsOfFields[i]
+                        documentUnion[docID]+=math.log(1+(inverted_index[key][i][docID]))*idf*weightsOfFields[i]
         else:
             notFound+=1
         relevantDocs.append(result)
     if notFound == len(parsedQuery.keys()):
-        print("Documents not found")
-
+        with open(PATH_QUERY[:-4]+"_op.txt", 'a') as f:
+            f.write("Documents not found\n")
+            f.close()
     for docID in documentUnion.keys():
         count=0
         for wordResult in relevantDocs:
@@ -161,7 +204,7 @@ def loadDocs(prompt):
                     if countIncreased==False:
                         count+=1
                         countIncreased=True
-        documentUnion[docID] = documentUnion[docID]*(count**2)
+        documentUnion[docID] = documentUnion[docID]*(count**3)
     return documentUnion
 
 def ranking(documentUnion):
@@ -173,7 +216,7 @@ def ranking(documentUnion):
             listOfFinal.append(heapq._heappop_max(ranked))
         
     return listOfFinal
-def printDocs(listOfFinal, factor=50000):
+def printDocs(listOfFinal, start_time, factor=50000):
     uniq_dumps = [(int((int(i[1])-1)//factor)+1, i[1]) for i in listOfFinal]
     uniq_dumps.sort(key=lambda x:x[0])
     print_dict={}
@@ -188,11 +231,23 @@ def printDocs(listOfFinal, factor=50000):
         else:
             print_dict[i[1]]=titleDump[i[1]]
         old_file=file_name
-    for i in listOfFinal:
-        print(i[1], print_dict[i[1]])
+    with open(PATH_QUERY[:-4]+"_op.txt", 'a') as f:
+        for i in listOfFinal:
+            f.write(str(i[1])+", "+str(print_dict[i[1]])+"\n")
+        elapsed_time = time.time() - start_time
+        f.write(str(elapsed_time)+"\n")
+        f.write("\n")
+        
+        f.close()
 
-documentUnion=loadDocs(prompt)
-listOfFinal=ranking(documentUnion)
-printDocs(listOfFinal)
+with open(PATH_QUERY, 'r') as f:
+    queries=f.readlines()
+    f.close()
+
+for i in queries:
+    start_time = time.time()
+    documentUnion=loadDocs(i.replace("\n", "").lower())
+    listOfFinal=ranking(documentUnion)
+    printDocs(listOfFinal, start_time,  60000)
 elapsed_time = time.time() - start_time
 print("Elapsed time: {}".format(hms_string(elapsed_time)))
