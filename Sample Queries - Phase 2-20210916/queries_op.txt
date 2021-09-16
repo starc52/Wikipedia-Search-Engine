@@ -100,3 +100,143 @@ Documents not found
 3302, Football League Third Division
 0.027792692184448242
 
+10997, Wikipedia:Peer review/Michael Jackson videography/archive1
+2821, 84th Academy Awards
+24609, David Williams (guitarist)
+28357, List of songs about cities
+24375, Wikipedia:Templates with red links/044
+35613, Dancing with the Stars (Australian season 3)
+24386, Wikipedia:Templates with red links/051
+24373, Wikipedia:Templates with red links/043
+24360, Wikipedia:Templates with red links/033
+24371, Wikipedia:Templates with red links/041
+0.03520941734313965
+
+32078, G.I. Joe (IDW Publishing)
+58, Interactions (The Spectacular Spider-Man)
+42345, Ron Wagner
+42439, Sea of Red
+24369, Wikipedia:Templates with red links/040
+45079, Britten and Brülightly
+12602, Perro amor (American TV series)
+15398, Long After I'm Gone
+42307, Romeo Brown
+25219, Pee-Wee Harris
+0.025325298309326172
+
+10997, Wikipedia:Peer review/Michael Jackson videography/archive1
+2821, 84th Academy Awards
+24609, David Williams (guitarist)
+28357, List of songs about cities
+24375, Wikipedia:Templates with red links/044
+35613, Dancing with the Stars (Australian season 3)
+24386, Wikipedia:Templates with red links/051
+24373, Wikipedia:Templates with red links/043
+24360, Wikipedia:Templates with red links/033
+24371, Wikipedia:Templates with red links/041
+0.03719592094421387
+
+32078, G.I. Joe (IDW Publishing)
+58, Interactions (The Spectacular Spider-Man)
+42345, Ron Wagner
+42439, Sea of Red
+24369, Wikipedia:Templates with red links/040
+45079, Britten and Brülightly
+12602, Perro amor (American TV series)
+15432, Rodrigo De Lazzari
+15398, Long After I'm Gone
+42307, Romeo Brown
+0.048285484313964844
+
+24371, Wikipedia:Templates with red links/041
+26995, Wikipedia:Templates with red links/039
+24388, Wikipedia:Templates with red links/053
+24378, Wikipedia:Templates with red links/046
+37489, 2008 FIM Motocross World Championship
+50763, Rune Factory 3
+47384, Moonlight in Havana
+15049, Wikipedia:WikiProject Spam/LinkReports/bmmagazine.co.uk
+11538, Find a Family
+47642, Wikipedia:Articles for deletion/Today (Gary Allan song)
+0.024939537048339844
+
+2819, 83rd Academy Awards
+34254, How to Make Love to a Woman
+51056, Chester McLure
+50924, James Lester Douglas
+24275, Dave Camp
+18809, Trade In
+14298, James Lee (offensive lineman)
+12368, Son of a Gun (Homicide: Life on the Street)
+41378, Opinion polling for the 2009 Norwegian parliamentary election
+41008, Lee Meng
+0.024704694747924805
+
+33483, Convoy GP55
+9224, Template:Type C3-S-A2 ships
+15273, Type D escort ship
+306, Template:Type C3-P&C ships
+35828, USS Coronado (LCS-4)
+41590, Template:Type T2-SE-A1 tankers
+27775, Joshua R. Sands
+31291, File:USS Sarasota at Lingayen Gulf, P.I., 1-8-1945.jpg
+24378, Wikipedia:Templates with red links/046
+1221, Wikipedia:Featured article candidates/Military career of L. Ron Hubbard/archive1
+0.032596588134765625
+
+42575, List of unusual units of measurement
+5079, Toyota i-REAL
+29103, Wikipedia:Reference desk/Archives/Science/2009 July 14
+21042, Wikipedia:Reference desk/Archives/Science/2009 July 12
+51975, Energy conservation in the United States
+41632, Wikipedia:Deletion log/August 2004 (2)
+8854, Inertia negation
+11959, Wikipedia:Reference desk/Archives/Science/2009 July 9
+46742, Wikipedia:Reference desk/Archives/Science/2009 July 17
+29268, Wikipedia:Reference desk/Archives/Miscellaneous/2009 July 13
+0.038353681564331055
+
+10385, Crusaders (guerrilla)
+3329, Lakers–Pistons rivalry
+24387, Wikipedia:Templates with red links/052
+39256, List of The Boys characters
+24397, Wikipedia:Templates with red links/058
+36028, Lynda Keane
+14864, 62nd Operations Group
+37382, The Thief of Venice
+37376, Figaro Here, Figaro There
+49368, Walter Eckhardt
+0.03138017654418945
+
+9623, List of Come Outside episodes
+8684, Wikipedia:Content noticeboard/Archive2
+27065, Wikipedia:Templates with red links/Protected areas
+27050, Promise (Gene Loves Jezebel album)
+24334, Wikipedia:Templates with red links/015
+23709, Hadley Caliman
+0.02475118637084961
+
+19605, List of New York State Historic Markers in Washington County, New York
+19613, List of New York State Historic Markers in Saratoga County, New York
+19591, List of New York State Historic Markers in Montgomery County, New York
+4346, Wikipedia:Articles for deletion/Estonia–India relations
+30442, List of colonial governors of Portuguese Timor
+19579, List of New York State Historic Markers in Essex County, New York
+19614, List of New York State Historic Markers in Rockland County, New York
+8245, Wikipedia:Recent additions/2006/August
+19616, List of New York State Historic Markers in Putnam County, New York
+7292, List of consorts of Holstein-Gottorp
+0.04723405838012695
+
+480, 2004 Rink Hockey Men's B World Championship
+13474, 2010 FIFA World Cup qualification – AFC Fifth Round
+12743, Brazil national under-17 football team
+24306, Hólmfríður Magnúsdóttir
+5070, 2009–10 Nottingham Forest F.C. season
+30923, Armenia national under-19 football team
+11837, Xherdan Shaqiri
+45050, Aldo Corzo
+41490, Márkó Futács
+3302, Football League Third Division
+0.029707908630371094
+
