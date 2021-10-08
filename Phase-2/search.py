@@ -7,7 +7,10 @@ import pickle as pkl
 import sys
 import heapq
 import math
-from itertools import product
+import multiprocessing
+import traceback
+from multiprocessing import Pool
+from itertools import product, repeat
 from string import ascii_lowercase
 total_characters = ascii_lowercase+"0123456789"
 
@@ -123,88 +126,112 @@ def parseQuery(prompt):
                 else:
                     continue
     return words
-                    
-def loadDocs(prompt):                 
-    parsedQuery=parseQuery(prompt)
-    relevantDocs = []
-    notFound=0
-    documentUnion={}
-    weightsOfFields={"t":100, "b":75, "c":2.0, "i":80, "l":1, "r":1.5}
+prevFilePath=""
+def searchWordInIndex(word, parsedQuery, notFound, weightsOfFields, countWordDoc, documentUnion):
+    global prevFilePath
     with open(os.path.join(PATH_INDEX, "broken"), "rb") as f:
         brokenIndices=pkl.load(f)
         f.close()
     with open(os.path.join(PATH_INDEX, "lastWord"), "rb") as f:
         lastWords=pkl.load(f)
         f.close()
-    for key, val in parsedQuery.items():
-        result = {}
-        if len(key)>=3:
-            searchPattern=key[0:3]
-        elif len(key)==2:
-            searchPattern=key[0:2]+key[0]
-        else:
-            searchPattern=key[0]*3
-        broken=False
-        for id, pattern in enumerate(brokenIndices):
-            if searchPattern == pattern[0]:
-                if id>0:
-                    searchRadius=(brokenIndices[id-1][1], brokenIndices[id][1])
-                else:
-                    searchRadius=(0, brokenIndices[id][1])
-                broken=True
+    if len(word)>=3:
+        searchPattern=word[0:3]
+    elif len(word)==2:
+        searchPattern=word[0:2]+word[0]
+    else:
+        searchPattern=word[0]*3
+    broken=False
+    for id, pattern in enumerate(brokenIndices):
+        if searchPattern == pattern[0]:
+            if id>0:
+                searchRadius=(brokenIndices[id-1][1], brokenIndices[id][1])
+            else:
+                searchRadius=(0, brokenIndices[id][1])
+            broken=True
+            break
+    if broken == True:
+        for check in range(searchRadius[0], searchRadius[1]):
+            if lastWords[check][1]>word:
+                file_name=lastWords[check][0]
                 break
-        if broken == True:
-            for check in range(searchRadius[0], searchRadius[1]):
-                if lastWords[check][1]>key:
-                    file_name=lastWords[check][0]
-                    break
-                else:
-                    continue
-            file_path = os.path.join(PATH_INDEX, file_name)
-        else:
-            file_path = os.path.join(PATH_INDEX, searchPattern)
-
+            else:
+                continue
+        file_path = os.path.join(PATH_INDEX, file_name)
+    else:
+        file_path = os.path.join(PATH_INDEX, searchPattern)
+    if file_path!=prevFilePath:
         with open(file_path, 'r') as f:
             inverted_index = json.load(f)
             f.close()
-        
-        if key in inverted_index.keys():
-            notFoundCounter=0
-            for i in val:
-                if i in inverted_index[key].keys():
-                    result.update({i:inverted_index[key][i]})
-                    idf = math.log(numberOfPages/len(inverted_index[key][i]))
-                    for docID in inverted_index[key][i]:
-                        if docID not in documentUnion.keys():
-                            documentUnion[docID]=1
-                        documentUnion[docID]+=math.log(1+(inverted_index[key][i][docID]))*idf*weightsOfFields[i]
+    prevFilePath = file_path
+    if word in inverted_index.keys():
+        for i in parsedQuery[word]:
+            if i in inverted_index[word].keys():
+                idf = math.log(numberOfPages/len(inverted_index[word][i]))
+                for docID in inverted_index[word][i]:
+                    if docID not in documentUnion.keys():
+                        documentUnion[docID]=0
+                    if docID not in countWordDoc.keys():
+                        countWordDoc[docID]=1
+                    else:
+                        countWordDoc[docID]+=1
+                    documentUnion[docID]+=math.log(1+(inverted_index[word][i][docID]))*idf*weightsOfFields[i]
+    else:
+        notFound+=1
+    return documentUnion, countWordDoc, notFound                    
+def mergeDicts(dict1, dict2):
+    if len(dict1)>len(dict2):
+        iterDict = dict2.copy()
+        otherDict = dict1.copy()
+    else:
+        iterDict = dict1.copy()
+        otherDict = dict2.copy()
+    if iterDict:
+        for i in iterDict.keys():
+            if i in otherDict:
+                otherDict[i]+=iterDict[i]
+            else:
+                otherDict[i]=iterDict[i]
+        return otherDict
+    else:
+        return otherDict
+
+def loadDocs(prompt):                 
+    parsedQuery=parseQuery(prompt)
+    relevantDocs = []
+    notFound=0
+    documentUnion={}
+    countWordDoc={}
+    weightsOfFields={"t":100, "b":75, "c":20, "i":80, "l":10, "r":15}
+    
+    listOfWords=sorted(parsedQuery.keys())
+    if listOfWords[0]=="":
+        return {}
+    print(listOfWords)
+    if len(listOfWords)>6:
+        with Pool() as p:
+            result=p.starmap(searchWordInIndex, zip(listOfWords, repeat(parsedQuery), repeat(notFound), repeat(weightsOfFields), repeat(countWordDoc), repeat(documentUnion)))
+            for wordOut in result:
+                try:
+                    tempDoc, tempCount, tempNotFound = wordOut
+                    notFound+=tempNotFound
+                    documentUnion = mergeDicts(tempDoc, documentUnion)
+                    countWordDoc = mergeDicts(tempCount, countWordDoc)
+                except Exception as exc:
+                    print(traceback.format_exc())
                 else:
-                    notFoundCounter+=1
-            if notFoundCounter == len(val):
-                for i in inverted_index[key].keys():
-                    result.update({i:inverted_index[key][i]})
-                    idf = math.log(numberOfPages/len(inverted_index[key][i]))
-                    for docID in inverted_index[key][i]:
-                        if docID not in documentUnion.keys():
-                            documentUnion[docID]=1
-                        documentUnion[docID]+=math.log(1+(inverted_index[key][i][docID]))*idf*weightsOfFields[i]
-        else:
-            notFound+=1
-        relevantDocs.append(result)
+                    pass
+    else:
+        for key in listOfWords:
+            documentUnion, countWordDoc, notFound = searchWordInIndex(key, parsedQuery, notFound, weightsOfFields, countWordDoc, documentUnion)
     if notFound == len(parsedQuery.keys()):
         with open(PATH_QUERY[:-4]+"_op.txt", 'a') as f:
             f.write("Documents not found\n")
             f.close()
+        return {}
     for docID in documentUnion.keys():
-        count=0
-        for wordResult in relevantDocs:
-            countIncreased=False
-            for fields in wordResult.keys():
-                if docID in wordResult[fields].keys():
-                    if countIncreased==False:
-                        count+=1
-                        countIncreased=True
-        documentUnion[docID] = documentUnion[docID]*(count**3)
+        documentUnion[docID] = documentUnion[docID]*(countWordDoc[docID]**3)
     return documentUnion
 
 def ranking(documentUnion):
@@ -239,15 +266,15 @@ def printDocs(listOfFinal, start_time, factor=50000):
         f.write("\n")
         
         f.close()
+if __name__ == '__main__':
+    with open(PATH_QUERY, 'r') as f:
+        queries=f.readlines()
+        f.close()
 
-with open(PATH_QUERY, 'r') as f:
-    queries=f.readlines()
-    f.close()
-
-for i in queries:
-    start_time = time.time()
-    documentUnion=loadDocs(i.replace("\n", "").lower())
-    listOfFinal=ranking(documentUnion)
-    printDocs(listOfFinal, start_time,  60000)
-elapsed_time = time.time() - start_time
-print("Elapsed time: {}".format(hms_string(elapsed_time)))
+    for i in queries:
+        if i:
+            start_time = time.time()
+            documentUnion=loadDocs(i.replace("\n", "").lower())
+            if documentUnion:
+                listOfFinal=ranking(documentUnion)
+                printDocs(listOfFinal, start_time,  60000)
